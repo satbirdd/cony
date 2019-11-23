@@ -10,6 +10,9 @@ type testDeclarer struct {
 	_QueueDeclare    func(string) (amqp.Queue, error)
 	_ExchangeDeclare func() error
 	_QueueBind       func() error
+	_Confirm         func(noWait bool) error
+	_NotifyPublish   func(confirm chan amqp.Confirmation) chan amqp.Confirmation
+	_NotifyReturn    func(c chan amqp.Return) chan amqp.Return
 }
 
 func (td *testDeclarer) QueueDeclare(name string, durable, autoDelete,
@@ -25,6 +28,18 @@ func (td *testDeclarer) ExchangeDeclare(name, kind string, durable, autoDelete,
 func (td *testDeclarer) QueueBind(name, key, exchange string, noWait bool,
 	args amqp.Table) error {
 	return td._QueueBind()
+}
+
+func (td *testDeclarer) Confirm(noWait bool) error {
+	return td._Confirm(noWait)
+}
+
+func (td *testDeclarer) NotifyPublish(confirm chan amqp.Confirmation) chan amqp.Confirmation {
+	return td._NotifyPublish(confirm)
+}
+
+func (td *testDeclarer) NotifyReturn(c chan amqp.Return) chan amqp.Return {
+	return td._NotifyReturn(c)
 }
 
 func TestDeclareQueue(t *testing.T) {
