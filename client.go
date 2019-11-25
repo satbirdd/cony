@@ -205,7 +205,7 @@ func (c *Client) Loop() bool {
 		if err == nil {
 
 			for _, declare := range c.consumeDeclarations {
-				c.reportErr(declare(ch))
+				c.reportErr(declare(ch1))
 			}
 
 			go cons.serve(c, ch1)
@@ -216,7 +216,7 @@ func (c *Client) Loop() bool {
 		ch1, err := c.channel()
 		if err == nil {
 			for _, declare := range c.pubDeclarations {
-				c.reportErr(declare(ch))
+				c.reportErr(declare(ch1))
 			}
 
 			go pub.serve(c, ch1)
