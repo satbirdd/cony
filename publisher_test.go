@@ -352,6 +352,22 @@ func TestPublishingTemplate(t *testing.T) {
 	}
 }
 
+func TestPublishingMandatory(t *testing.T) {
+	p := newTestPublisher()
+
+	PublishingMandatory(true)(p)
+
+	if p.mandatory != true {
+		t.Error("PublishingMandatory() should update mandatory")
+	}
+
+	PublishingMandatory(false)(p)
+
+	if p.mandatory != false {
+		t.Error("PublishingMandatory() should update mandatory")
+	}
+}
+
 func newTestPublisher(opts ...PublisherOpt) *Publisher {
 	return NewPublisher("exchange.name", "routing.key", opts...)
 }
