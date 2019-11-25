@@ -25,18 +25,20 @@ type ClientOpt func(*Client)
 
 // Client is a Main AMQP client wrapper
 type Client struct {
-	addr         string
-	declarations []Declaration
-	consumers    map[*Consumer]struct{}
-	publishers   map[*Publisher]struct{}
-	errs         chan error
-	blocking     chan amqp.Blocking
-	run          int32        // bool
-	conn         atomic.Value //*amqp.Connection
-	bo           Backoffer
-	attempt      int32
-	l            sync.Mutex
-	config       amqp.Config
+	addr                string
+	declarations        []Declaration
+	pubDeclarations     []Declaration
+	consumeDeclarations []Declaration
+	consumers           map[*Consumer]struct{}
+	publishers          map[*Publisher]struct{}
+	errs                chan error
+	blocking            chan amqp.Blocking
+	run                 int32        // bool
+	conn                atomic.Value //*amqp.Connection
+	bo                  Backoffer
+	attempt             int32
+	l                   sync.Mutex
+	config              amqp.Config
 }
 
 // Declare used to declare queues/exchanges/bindings.
@@ -50,6 +52,22 @@ func (c *Client) Declare(d []Declaration) {
 			declare(ch)
 		}
 	}
+}
+
+// Declare used to declare notifyPublish, notifyReturn, confirm.
+// Declaration is saved and will be re-run every time Client gets connection
+func (c *Client) PublishDeclare(d []Declaration) {
+	c.l.Lock()
+	defer c.l.Unlock()
+	c.pubDeclarations = append(c.pubDeclarations, d...)
+}
+
+// Declare used to declare notifyPublish, notifyReturn, confirm.
+// Declaration is saved and will be re-run every time Client gets connection
+func (c *Client) ComsumeDeclare(d []Declaration) {
+	c.l.Lock()
+	defer c.l.Unlock()
+	c.consumeDeclarations = append(c.consumeDeclarations, d...)
 }
 
 // Consume used to declare consumers
@@ -185,6 +203,11 @@ func (c *Client) Loop() bool {
 	for cons := range c.consumers {
 		ch1, err := c.channel()
 		if err == nil {
+
+			for _, declare := range c.consumeDeclarations {
+				c.reportErr(declare(ch))
+			}
+
 			go cons.serve(c, ch1)
 		}
 	}
@@ -192,6 +215,10 @@ func (c *Client) Loop() bool {
 	for pub := range c.publishers {
 		ch1, err := c.channel()
 		if err == nil {
+			for _, declare := range c.pubDeclarations {
+				c.reportErr(declare(ch))
+			}
+
 			go pub.serve(c, ch1)
 		}
 	}
